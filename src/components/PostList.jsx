@@ -7,6 +7,7 @@ import {
   Flex,
   Link,
 } from "@chakra-ui/react";
+import { formatDate } from "@/helpers/formatDate";
 import { getAllPosts } from "@/helpers/getAllPosts";
 
 export default function PostList() {
@@ -23,11 +24,7 @@ export default function PostList() {
               </Link>
             </Heading>
             <Text fontSize="sm" color="gray.500" m={4}>
-              {new Date(date).toLocaleDateString("pt-BR", {
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-              })}
+              {formatDate(date)}
             </Text>
             <Box w="100%" textAlign="center">
               <Text
