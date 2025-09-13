@@ -16,7 +16,7 @@ export function getAllPosts() {
 
     const { data, content } = matter(source);
     const excerpt =
-      content.trim().replace(/\n+/g, " ").substring(1, 350).trim() + "…";
+      content.trim().replace(/\n+/g, " ").substring(0, 350).trim() + "…";
 
     return {
       slug,
