@@ -1,12 +1,12 @@
-import { promises as fs } from "fs";
 import path from "path";
 import matter from "gray-matter";
+import { promises as fs } from "fs";
 import { formatDate } from "@/helpers/formatDate";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import Image from "next/image";
 import { Provider } from "@/components/ui/provider";
 import { getMDXComponents } from "../../../../mdx-components";
 import { Text, Heading, Box } from "@chakra-ui/react";
+import Image from "next/image";
 
 export async function generateStaticParams() {
   const postsDir = path.join(process.cwd(), "content", "posts");
