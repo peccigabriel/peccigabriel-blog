@@ -7,6 +7,7 @@ import { Provider } from "@/components/ui/provider";
 import { getMDXComponents } from "../../../../mdx-components";
 import { Text, Heading, Box } from "@chakra-ui/react";
 import Image from "next/image";
+import ReadingProgress from "@/components/ReadingProgress";
 
 const BASE_URL = "https://peccigabriel.com";
 
@@ -69,6 +70,7 @@ export default async function PostPage({ params }) {
 
   return (
     <Provider>
+      <ReadingProgress />
       <Text fontSize="sm" color="gray.500" m={4} textAlign="right">
         {formatDate(data.date)}
       </Text>
