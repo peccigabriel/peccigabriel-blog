@@ -8,6 +8,8 @@ import { getMDXComponents } from "../../../../mdx-components";
 import { Text, Heading, Box } from "@chakra-ui/react";
 import Image from "next/image";
 
+const BASE_URL = "https://peccigabriel.com";
+
 export async function generateStaticParams() {
   const postsDir = path.join(process.cwd(), "content", "posts");
   const files = await fs
@@ -17,6 +19,46 @@ export async function generateStaticParams() {
   return files.map((filename) => ({
     slug: filename.replace(/\.mdx$/, ""),
   }));
+}
+
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const file = path.join(process.cwd(), "content", "posts", `${slug}.mdx`);
+  const source = await fs.readFile(file, "utf8");
+  const { data } = matter(source);
+
+  const title = data.title;
+  const description =
+    data.description || `Leia "${data.title}" no blog [peccigabriel]`;
+  const imageUrl = `${BASE_URL}${data.cover}`;
+  const postUrl = `${BASE_URL}/posts/${slug}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "article",
+      locale: "pt_BR",
+      url: postUrl,
+      siteName: "[peccigabriel]",
+      title,
+      description,
+      images: [
+        {
+          url: imageUrl,
+          alt: data.coverAlt,
+          width: 1200,
+          height: 630,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [imageUrl],
+    },
+  };
 }
 
 export default async function PostPage({ params }) {

@@ -26,6 +26,7 @@ export default function RootLayout({ children }) {
         <link rel="canonical" href="https://peccigabriel.com" />
       </head>
       <body
+        suppressHydrationWarning
         style={{
           display: "flex",
           flexDirection: "column",
