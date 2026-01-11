@@ -2,8 +2,12 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 
-export function getAllPosts() {
-  const postsDir = path.join(process.cwd(), "content", "posts");
+export function getAllPosts(locale = "pt-br") {
+  const postsDir = path.join(process.cwd(), "content", "posts", locale);
+
+  if (!fs.existsSync(postsDir)) {
+    return [];
+  }
 
   const files = fs
     .readdirSync(postsDir)

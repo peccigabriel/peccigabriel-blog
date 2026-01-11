@@ -1,9 +1,12 @@
 import { Stack, Box, Text, Link } from "@chakra-ui/react";
+import { useTranslations } from "next-intl";
 
 const URL_LINKEDIN = "https://www.linkedin.com/in/gabriel-pecci-074a98169/";
 const URL_GITHUB = "https://github.com/peccigabriel";
 
 export default function Footer() {
+  const t = useTranslations("footer");
+
   const CustomLink = ({ children, href }) => (
     <Link
       href={href}
@@ -21,7 +24,7 @@ export default function Footer() {
   return (
     <Stack as="footer" py={4} textAlign="center">
       <Text fontSize="sm" color="gray.600">
-        © {new Date().getFullYear()} Gabriel Pecci. All rights reserved.
+        © {new Date().getFullYear()} Gabriel Pecci. {t("rights")}.
       </Text>
       <Box>
         <CustomLink href={URL_LINKEDIN}>LinkedIn</CustomLink>

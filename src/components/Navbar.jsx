@@ -9,18 +9,26 @@ import {
   Box,
   Container,
   Flex,
-  Link,
   Text,
   IconButton,
   Portal,
   Menu,
+  Link,
 } from "@chakra-ui/react";
+import { useTranslations } from "next-intl";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const toggleMenu = () => setIsOpen((o) => !o);
+  const t = useTranslations("navbar");
 
   const Icon = isOpen ? RiCloseLargeLine : RxHamburgerMenu;
+
+  const menuItems = [
+    { label: t("home").toUpperCase(), href: "/" },
+    { label: t("about").toUpperCase(), href: "/about" },
+  ];
 
   return (
     <Box>
@@ -36,12 +44,9 @@ export default function Navbar() {
               <Portal>
                 <Menu.Positioner>
                   <Menu.Content>
-                    {["POSTS", "SOBRE"].map((label, i) => {
-                      const href = label === "POSTS" ? "/" : "/about";
-                      return (
-                        <Menu.Item
-                          key={label}
-                          as={Link}
+                    {menuItems.map(({ label, href }) => (
+                      <Menu.Item key={label} asChild>
+                        <Link
                           href={href}
                           fontFamily={poppins.style.fontFamily}
                           fontSize="sm"
@@ -55,9 +60,9 @@ export default function Navbar() {
                           }}
                         >
                           {label}
-                        </Menu.Item>
-                      );
-                    })}
+                        </Link>
+                      </Menu.Item>
+                    ))}
                   </Menu.Content>
                 </Menu.Positioner>
               </Portal>
@@ -76,7 +81,8 @@ export default function Navbar() {
               </Text>
             </Link>
           </Flex>
-          <Box display="flex" alignItems="center" gap={8}>
+          <Box display="flex" alignItems="center" gap={4}>
+            <LanguageSwitcher />
             <ColorModeButton />
           </Box>
         </Flex>

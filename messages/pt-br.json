@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "title": "[peccigabriel] | Blog",
+    "description": "Blog de um desenvolvedor curioso"
+  },
+  "navbar": {
+    "home": "Home",
+    "about": "Sobre"
+  },
+  "footer": {
+    "rights": "Todos os direitos reservados"
+  },
+  "about": {
+    "intro": "Olá, seja muito bem-vindo! Me chamo Gabriel e sou programador há mais ou menos 10 anos.",
+    "journey": "Ao longo dessa jornada, já acertei, já errei (e continuo errando bastante! rs), ensinei, aprendi, fui ajudado e ajudei também. Mas acima de tudo, percebi algo especial sobre nossa profissão: nós, desenvolvedores, somos incrivelmente privilegiados.",
+    "privilege": "Por quê? Porque diferente de muitas áreas por aí, precisamos apenas de um computador e muita curiosidade para criar algo incrível. Unindo tecnologia à criatividade, podemos dar vida a ideias, resolver problemas reais e causar impacto positivo no mundo à nossa volta.",
+    "blog": "Este blog é exatamente sobre isso: compartilhar experiências, desafios e aprendizados sobre desenvolvimento, tecnologia, e criatividade.",
+    "welcome": "Fique à vontade :)"
+  },
+  "postList": {
+    "title": "Artigos",
+    "readMore": "Continue lendo",
+    "empty": "Nenhum artigo disponível ainda.",
+    "readDescription": "Leia \"{title}\" no blog [peccigabriel]"
+  }
+}

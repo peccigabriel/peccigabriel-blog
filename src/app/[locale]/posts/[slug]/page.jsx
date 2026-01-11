@@ -4,42 +4,68 @@ import { promises as fs } from "fs";
 import { formatDate } from "@/helpers/formatDate";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import { Provider } from "@/components/ui/provider";
-import { getMDXComponents } from "../../../../mdx-components";
+import { getMDXComponents } from "../../../../../mdx-components";
 import { Text, Heading, Box } from "@chakra-ui/react";
 import Image from "next/image";
 import ReadingProgress from "@/components/ReadingProgress";
+import { routing } from "@/i18n/routing";
+import { getTranslations } from "next-intl/server";
 
 const BASE_URL = "https://peccigabriel.com";
 
 export async function generateStaticParams() {
-  const postsDir = path.join(process.cwd(), "content", "posts");
-  const files = await fs
-    .readdir(postsDir)
-    .then((list) => list.filter((f) => f.endsWith(".mdx")));
+  const params = [];
 
-  return files.map((filename) => ({
-    slug: filename.replace(/\.mdx$/, ""),
-  }));
+  for (const locale of routing.locales) {
+    const postsDir = path.join(process.cwd(), "content", "posts", locale);
+
+    try {
+      const files = await fs.readdir(postsDir);
+      const mdxFiles = files.filter((f) => f.endsWith(".mdx"));
+
+      for (const filename of mdxFiles) {
+        params.push({
+          locale,
+          slug: filename.replace(/\.mdx$/, ""),
+        });
+      }
+    } catch {
+      // Directory doesn't exist yet, skip
+    }
+  }
+
+  return params;
 }
 
 export async function generateMetadata({ params }) {
-  const { slug } = await params;
-  const file = path.join(process.cwd(), "content", "posts", `${slug}.mdx`);
+  const { locale, slug } = await params;
+  const t = await getTranslations({ locale, namespace: "postList" });
+
+  const file = path.join(
+    process.cwd(),
+    "content",
+    "posts",
+    locale,
+    `${slug}.mdx`
+  );
   const source = await fs.readFile(file, "utf8");
   const { data } = matter(source);
 
   const title = data.title;
   const description =
-    data.description || `Leia "${data.title}" no blog [peccigabriel]`;
+    data.description || t("readDescription", { title: data.title });
   const imageUrl = `${BASE_URL}${data.cover}`;
-  const postUrl = `${BASE_URL}/posts/${slug}`;
+  const postUrl =
+    locale === "pt-br"
+      ? `${BASE_URL}/posts/${slug}`
+      : `${BASE_URL}/${locale}/posts/${slug}`;
 
   return {
     title,
     description,
     openGraph: {
       type: "article",
-      locale: "pt_BR",
+      locale: locale === "pt-br" ? "pt_BR" : "en_US",
       url: postUrl,
       siteName: "[peccigabriel]",
       title,
@@ -63,8 +89,14 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function PostPage({ params }) {
-  const { slug } = await params;
-  const file = path.join(process.cwd(), "content", "posts", `${slug}.mdx`);
+  const { locale, slug } = await params;
+  const file = path.join(
+    process.cwd(),
+    "content",
+    "posts",
+    locale,
+    `${slug}.mdx`
+  );
   const source = await fs.readFile(file, "utf8");
   const { content, data } = matter(source);
 
@@ -72,7 +104,7 @@ export default async function PostPage({ params }) {
     <Provider>
       <ReadingProgress />
       <Text fontSize="sm" color="gray.500" m={4} textAlign="right">
-        {formatDate(data.date)}
+        {formatDate(data.date, locale)}
       </Text>
       <hr style={{ margin: "1rem 0" }} />
       <Heading as="h1" size="3xl" mt="8" mb="4">

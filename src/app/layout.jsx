@@ -1,25 +1,8 @@
-import { Provider } from "@/components/ui/provider";
-import { Container } from "@chakra-ui/react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+export default async function RootLayout({ children, params }) {
+  const { locale } = await params;
 
-export const metadata = {
-  title: "[peccigabriel] | Blog",
-  description: "Blog de um desenvolvedor curioso",
-  authors: [{ name: "Gabriel Pecci" }],
-  openGraph: {
-    type: "website",
-    locale: "pt_BR",
-    url: "https://peccigabriel.com",
-    siteName: "[peccigabriel]",
-    title: "[peccigabriel]",
-    description: "Blog de um desenvolvedor curioso",
-  },
-};
-
-export default function RootLayout({ children }) {
   return (
-    <html suppressHydrationWarning lang="pt-BR">
+    <html suppressHydrationWarning lang={locale || "pt-br"}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
@@ -34,13 +17,7 @@ export default function RootLayout({ children }) {
           fontSize: "1.25rem",
         }}
       >
-        <Provider>
-          <Navbar />
-          <Container maxW="2xl" marginTop="4" flex={1} flexWrap="wrap">
-            {children}
-          </Container>
-          <Footer />
-        </Provider>
+        {children}
       </body>
     </html>
   );

@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "title": "[peccigabriel] | Blog",
+    "description": "Blog of a curious developer"
+  },
+  "navbar": {
+    "home": "Home",
+    "about": "About"
+  },
+  "footer": {
+    "rights": "All rights reserved"
+  },
+  "about": {
+    "intro": "Hello, welcome! My name is Gabriel and I've been a programmer for about 10 years.",
+    "journey": "Throughout this journey, I've succeeded, I've failed (and I keep failing a lot! lol), I've taught, I've learned, I've been helped and I've helped others too. But above all, I've noticed something special about our profession: we developers are incredibly privileged.",
+    "privilege": "Why? Because unlike many fields out there, we only need a computer and a lot of curiosity to create something amazing. By combining technology with creativity, we can bring ideas to life, solve real problems and make a positive impact on the world around us.",
+    "blog": "This blog is exactly about that: sharing experiences, challenges and learnings about development, technology, and creativity.",
+    "welcome": "Make yourself at home :)"
+  },
+  "postList": {
+    "title": "Articles",
+    "readMore": "Read more",
+    "empty": "No articles available yet.",
+    "readDescription": "Read \"{title}\" on [peccigabriel] blog"
+  }
+}
