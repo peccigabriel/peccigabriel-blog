@@ -1,0 +1,184 @@
+---
+title: "Over-fetching: The Silent Villain That May Be Degrading Your Application"
+date: "2026-05-11"
+cover: "/images/overfetching.webp"
+coverAlt: "Illustration about API over-fetching and performance impact"
+---
+
+I was recently discussing an API contract with some coworkers. It was a simple contract. A fixed list of about 100 objects, each with 4 properties. Of those 4 properties per object, we would only use 2 in the interface. In other words, 50% of the properties returned by that contract would not serve any purpose at all, giving us the infamous **over-fetching**.
+
+We talked a bit about it, about the scale of over-fetching, what can happen in the long run, and potential problems. Like every conversation and every experience, there was something to learn; I decided to take this topic deeper in this post. Let’s explore what over-fetching is and how it can quietly degrade an application’s performance. Let’s dig in.
+
+## What is over-fetching?
+
+First, we need to pin down what over-fetching means. Over-fetching happens when an API returns more data than the client (the UI, in this case) actually needs to do its job.
+
+It’s a problem rooted in API contracts. It usually happens when the server (back end) decides what to deliver without really considering what each client will consume. For example, the client receives a full payload, uses only about 20% of it, and throws away the rest.
+
+The concept gained traction with the rise of GraphQL in 2015, which was built partly as an answer to REST’s over-fetching and under-fetching. Meta created GraphQL internally because its REST APIs returned too much data for mobile, where bandwidth and performance really matter.
+
+## Why does it seem harmless?
+
+When you look at a single request in isolation, it rarely feels like a problem. You open DevTools, go to the Network tab, see 100 records come back in 80ms, and think: “Great.” The mistake is not considering the full context of the application.
+
+The Network tab gives you quick hints about speed, but nothing about the cost of what arrived unnecessarily. There is no red alert for over-fetching.
+
+On top of that, there’s a widespread bias toward “if it works, don’t touch it.” Over-fetching rarely breaks anything. The app keeps working, tests keep passing, so nobody questions it.
+
+It’s also common to find environments where there is no deliberately designed API contract between back end and front end. Often the back end returns everything related to an entity; without someone owning the contract, over-fetching grows quietly.
+
+## Scaling the problem
+
+### The math of growth
+
+Think about scale starting from something simple. One extra field across 100 records seems fine. Now multiply that by 10 concurrent requests, 50 different components calling APIs, hundreds or thousands of users. The problem doesn’t grow linearly, it multiplies.
+
+### Impact on real metrics
+
+#### Payload size
+
+This is the most direct and visible. Every unnecessary field has a byte cost. Alone it seems negligible, but it’s the root of everything that follows.
+
+#### TTFB (Time to First Byte)
+
+This is the time from when the request is sent until the first byte of the response arrives. Over-fetching affects it in two ways:
+
+- **On the client side**, the server must fetch, serialize, and transmit more data. The larger the payload, the longer until the first byte arrives.
+- **On the server side / SSR**, Next.js waits for the API before it can start generating HTML. A fat payload delays the TTFB for the entire page, and the user sees nothing until that finishes.
+
+#### TBT (Total Blocking Time)
+
+When the payload reaches the browser, JavaScript must parse the JSON, iterate, filter, and transform the data. The larger the payload, the bigger and longer that work on the main thread. Tasks longer than about 50ms block user interactions: clicks, scroll, input. TBT is the sum of those blocks.
+
+Over-fetching is a silent contributor here. Nobody connects “janky scrolling” to extra fields in an API response.
+
+#### LCP (Largest Contentful Paint)
+
+This is the consequence of consequences. LCP measures when the largest visible element on the page is rendered. It’s affected indirectly but truly by over-fetching:
+
+- High TTFB delays when the browser starts rendering.
+- A main thread blocked by TBT delays painting visible elements.
+- If the main content depends on API data, LCP only happens after all of that settles.
+
+This is where over-fetching leaves the world of APIs and enters user experience (and the metrics Google uses to rank your site).
+
+## Three dimensions of the problem
+
+**1. Width (unnecessary fields on the object)**
+
+```javascript
+// The client only needs this:
+{ "code": "001", "name": "Banco do Brasil" }
+
+// The API returns this:
+{
+  "code": "001",
+  "name": "Banco do Brasil",
+  "ispb": "00000000",
+  "country_code": "BR",
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
+**2. Depth (unnecessary nested objects)**
+
+```javascript
+// The client wants to show the user's name in a header
+// The API returns:
+{
+  "user": {
+    "name": "João",
+    "address": {
+      "street": "...",
+      "city": "...",
+      "zipcode": "...",
+    },
+    "orders": [
+      {
+        "id": "...",
+        "items": [
+          {
+            "id": "...",
+            "name": "...",
+            "price": "..."
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This is the heaviest in terms of payload size. A single object can grow exponentially depending on how deep the nesting goes. It’s also the hardest to spot because the data feels related and “belongs” there.
+
+**3. Volume (collection over-fetching)**
+
+The API returns more rows than the client can or needs to process. For example, the UI renders 10 items at a time, but the API returns 500 records at once instead of delivering data on demand with pagination and filters.
+
+This one hits Core Web Vitals the hardest: besides a large payload, it often causes unnecessary main-thread work and increases TBT.
+
+## Does anything change with server-side rendering?
+
+With SSR (Next.js, for example), the Next.js server becomes the “client” of your API. So over-fetching happens server-to-server, before HTML reaches the browser. The consequences shift quite a bit.
+
+### What improves
+
+- The fat payload doesn’t travel over the network to the browser. Next consumes it, processes it, and sends only the HTML needed.
+- TBT in the browser tends to be lower because JSON parsing doesn’t run on the client.
+- The user gets a fully rendered page.
+
+### What gets worse or stays the same
+
+- The heavy query and serialization still happen on the server.
+- TTFB goes up because the Next server must wait for the API to respond with a large payload before generating HTML.
+- At scale, the Next server uses more memory and CPU processing unnecessary data.
+- Infrastructure cost remains real.
+
+TTFB becomes the main villain in SSR. With CSR, the user at least sees something on screen while the request runs. With SSR, nothing is shown until the server finishes everything, so a fat payload delays everything.
+
+## The invisible cost of cleaning up later
+
+### API contracts are hard to change once shipped
+
+When an API goes to production, its contract puts down roots. Other teams, services, and clients start depending on that response shape, including fields nobody needed. Removing a field, even if it was never intentionally used, becomes a real risk of breaking production. What started as carelessness turns into a permanent technical decision.
+
+### Nobody remembers what is or isn’t used
+
+Over time, the API response becomes a black box. Time passes, the engineer who built that API moves on. Documentation drifts. Nobody is sure whether a property is used anywhere.
+
+Removing something safely becomes archaeology. You have to trace every consumer, every client, every environment. The cost of cleanup grows with how long the problem stayed hidden or ignored.
+
+### Organizational cost
+
+Beyond the technical side, there’s the human side. Refactoring API contracts requires alignment between front end and back end, sometimes product too. That means meetings, decisions, tests, coordinated deploys. It’s work that doesn’t ship a new feature, which makes it hard to justify to leadership.
+
+That’s another reason over-fetching rarely gets fixed. Besides being technically tricky, the organizational cost of fixing it often outweighs the immediate pain of leaving it alone.
+
+## How to avoid it?
+
+### Culture and process
+
+- **Design contracts before you implement.** The fix starts before code. Front end and back end need to agree upfront on what each endpoint should return.
+- **Own the contract.** Someone must be responsible. Without an owner, the contract grows without criteria. It can be any developer, but it must be documented (tech doc, ADR, or whatever you call it) and have an owner.
+- **Review contracts periodically.** Apps change, UIs change. Contracts should be revisited and updated when needed.
+
+### Technical solutions
+
+- **Field projection in REST:** query parameters that define which fields to return (`?fields=code,name`). Simple to implement; fixes width.
+- **BFF / GraphQL:** an intermediate layer that adapts generic APIs to what each client actually needs.
+- **Proper pagination and filters:** deliver data on demand instead of everything at once. That addresses volume.
+
+## Conclusion
+
+Going back to that conversation with coworkers, what looked like a simple debate about two extra fields across 100 records turned out to be something much bigger. Over-fetching rarely shows up as an obvious problem. It installs itself quietly, grows with the application, and by the time it’s visible, it’s already rooted in contracts, teams, and infrastructure.
+
+The good news is that avoiding this doesn’t require huge refactors or new stacks. It takes attention to the contract from day one, clear ownership, and a culture of periodic review. Technology, whether GraphQL, a BFF, or field projection, follows from a decision made well before the code exists.
+
+So before we close: how many unnecessary fields are moving through your application right now?
+
+## References
+
+- [Chrome Developers — Performance scoring](https://developer.chrome.com/docs/lighthouse/performance/performance-scoring)
+- [GraphQL](https://graphql.org/)
+- [Google Search Central — Core Web Vitals](https://developers.google.com/search/docs/appearance/core-web-vitals)

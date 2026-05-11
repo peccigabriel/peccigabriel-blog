@@ -1,0 +1,184 @@
+---
+title: "Over-fetching: o vilão silencioso que pode estar degradando a sua aplicação"
+date: "2026-05-11"
+cover: "/images/overfetching.webp"
+coverAlt: "Ilustração sobre over-fetching em APIs e impacto em performance"
+---
+
+Recentemente, estava discutindo sobre um contrato de API com alguns colegas de trabalho. Era um contrato simples. Uma lista fixa com cerca de 100 objetos compostos por 4 propriedades. Dessas 4 propriedades de cada objeto, nós iríamos usar apenas 2 na interface. Ou seja, 50% das propriedades retornadas nesse contrato não serviriam para absolutamente nada, impondo assim o famigerado **over-fetching**.
+
+Nós conversamos um pouco sobre isso, sobre escala de over-fetching, o que pode acontecer no longo prazo e potenciais problemas. Como toda conversa e todo acontecimento sempre têm algo a nos ensinar, resolvi trazer esse tópico de uma maneira mais profunda para esse post. Vamos explorar um pouco mais no detalhe o que é o over-fetching e como ele pode acabar degradando a performance de uma aplicação de maneira silenciosa. Segue a fio.
+
+## O que é over-fetching?
+
+Bom, antes de mais nada, precisamos falar um pouco sobre a definição de over-fetching. Over-fetching acontece quando uma API retorna mais dados do que o cliente (interface neste caso) realmente precisa para cumprir a sua função.
+
+É um problema que nasce nos contratos de API. Isso geralmente acontece quando o servidor (back-end) define o que entregar, sem realmente considerar o que cada cliente realmente vai consumir. Por exemplo, o cliente recebe um payload completo, usa apenas 20% dele e descarta o resto.
+
+Esse conceito começou a ser mais explorado e discutido com a popularização do GraphQL em 2015, que nasceu justamente como uma resposta ao over-fetching e under-fetching do REST. A Meta criou o GraphQL internamente porque suas APIs REST retornavam dados demais para o mobile, onde banda e performance importam muito.
+
+## Por que parece inofensivo?
+
+Quando observamos uma única requisição de forma isolada, raramente isso parece um problema. Abrimos o DevTools e, na aba Network, olhamos para 100 registros sendo retornados em 80ms e pensamos: “Bom, isso está ótimo”. Nosso erro está em não considerar o contexto inteiro da aplicação.
+
+Explorando um pouco mais o Network tab do browser, conseguimos insumos rápidos sobre velocidade; porém, não conseguimos nada referente ao custo do que veio desnecessariamente. Não existe nenhum alerta vermelho para over-fetching.
+
+Somado a isso, existe um viés muito difundido do “se isso funciona, não mexa”. O over-fetching raramente quebra algo. A aplicação continua funcionando normalmente, os testes passam normalmente, logo, ninguém questiona.
+
+Também é comum encontrarmos ambientes onde não existe um contrato de API desenhado entre back-end e front-end. Em muitos casos o back-end entrega absolutamente tudo relacionado a uma entidade e, ao não ter ninguém responsável pelo contrato, o over-fetching vai crescendo silenciosamente.
+
+## Escalando o problema
+
+### A matemática do crescimento
+
+Vamos pensar em escala partindo de uma situação simples. Um campo extra em 100 registros parece ok. Mas vamos multiplicar isso por 10 requests simultâneas, por 50 componentes diferentes consumindo APIs, por centenas ou milhares de usuários. O problema não cresce de maneira linear: ele se multiplica.
+
+### O impacto em métricas reais
+
+#### Payload size
+
+É o mais direto e visível. Cada campo desnecessário tem um peso em bytes. Isolado parece negligenciável, mas é a origem de tudo que vem depois.
+
+#### TTFB (Time to First Byte)
+
+É o tempo entre a requisição ser feita e o primeiro byte da resposta chegar. O over-fetching afeta isso de dois lados:
+
+- **No client-side**, o servidor precisa buscar, serializar e transmitir mais dados. Quanto maior o payload, mais tempo até o primeiro byte chegar.
+- **No server-side/SSR**, o Next.js fica esperando a API responder antes de começar a gerar o HTML. Um payload gordo atrasa o TTFB da página inteira, e o usuário não vê nada até isso resolver.
+
+#### TBT (Total Blocking Time)
+
+Quando o payload chega no browser, o JavaScript precisa fazer o parse do JSON, iterar, filtrar e transformar os dados. Quanto maior o payload, maior e mais longa essa tarefa na main thread. Tarefas acima de 50ms bloqueiam interações do usuário: cliques, scroll, inputs. O TBT é a soma desses bloqueios.
+
+O over-fetching é um contribuidor silencioso aqui. Ninguém associa “scroll engasgado” a campos extras numa resposta de API.
+
+#### LCP (Largest Contentful Paint)
+
+Essa é a consequência das consequências. O LCP mede quando o maior elemento visual da página é renderizado. Ele é afetado pelo over-fetching de forma indireta, mas real:
+
+- TTFB alto atrasa quando o browser começa a renderizar.
+- Main thread bloqueada pelo TBT atrasa a pintura dos elementos visuais.
+- Se o conteúdo principal depende dos dados da API, o LCP só acontece depois que tudo isso resolver.
+
+É aqui que o over-fetching sai do mundo das APIs e entra no mundo da experiência do usuário (e das métricas que o Google usa para ranquear seu site).
+
+## As três dimensões do problema
+
+**1. Largura (campos desnecessários no objeto)**
+
+```
+// Cliente precisa só disso:
+{ "code": "001", "name": "Banco do Brasil" }
+
+// API retorna isso:
+{
+  "code": "001",
+  "name": "Banco do Brasil",
+  "ispb": "00000000",
+  "country_code": "BR",
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
+**2. Profundidade (objetos aninhados desnecessários)**
+
+```javascript
+// Client vai apenas exibir o nome do usuário
+// API retorna:
+{
+  "user": {
+    "name": "João",
+    "address": {
+      "street": "...",
+      "city": "...",
+      "zipcode": "...",
+    },
+    "orders": [
+      {
+        "id": "...",
+        "items": [
+          {
+            "id": "...",
+            "name": "...",
+            "price": "..."
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Esse é o mais pesado em tamanho de payload. Um único objeto pode crescer exponencialmente dependendo de quantos níveis de aninhamento existem. E é o mais difícil de identificar porque o dado parece relacionado e faz sentido estar ali.
+
+**3. Volume (collection over-fetching)**
+
+A API retorna mais registros do que o cliente consegue ou precisa processar. Por exemplo, o cliente renderiza uma lista de 10 itens na tela de cada vez, porém a API retorna 500 registros de uma vez, ao invés de entregar esses dados sob demanda através de paginação e filtros.
+
+Esse é o mais impactante em Core Web Vitals porque, além de payload grande, frequentemente causa trabalho desnecessário na main thread, aumentando o TBT.
+
+## E no server-side rendering, muda alguma coisa?
+
+No SSR (Next.js, por exemplo), o servidor Next.js vira o “cliente” da sua API. Então o over-fetching acontece servidor a servidor, antes do HTML chegar pro browser. As consequências mudam bastante.
+
+### O que melhora
+
+- O payload gordo não trafega pela rede até o browser. O Next consome, processa e manda só o HTML necessário.
+- TBT no browser tende a ser menor, porque o JavaScript de parsing não roda no cliente.
+- O usuário recebe uma página já renderizada.
+
+### O que piora ou permanece
+
+- A query pesada e a serialização ainda acontecem no servidor.
+- O TTFB aumenta, porque o servidor Next precisa esperar a API responder com um payload grande antes de começar a gerar o HTML.
+- Em escala, o servidor Next consome mais memória e CPU processando dados desnecessários.
+- Custo de infraestrutura continua real.
+
+O TTFB vira o vilão principal no SSR. No CSR o usuário pelo menos vê algo na tela enquanto a requisição acontece. No SSR, nada é exibido até o servidor terminar todo o processamento, então um payload gordo atrasa tudo.
+
+## O custo invisível de polir depois
+
+### Contratos de API são difíceis de mudar depois de implementados
+
+Quando uma API entra em produção, o contrato dela começa a criar raízes. Outros times, outros serviços, outros clientes começam a depender daquele formato de resposta, inclusive dos campos desnecessários. Remover um campo, mesmo que nunca tenha sido usado intencionalmente, vira um risco real de quebrar algo em produção. O que nasceu como descuido vira uma decisão técnica permanente.
+
+### Ninguém mais lembra o que é ou não usado
+
+Com o tempo, a resposta da API vira uma caixa preta. O tempo vai passando, o engenheiro que implementou aquela API saiu do time. A documentação está desatualizada. Ninguém tem certeza se aquela propriedade está sendo usada em algum lugar ou não.
+
+Remover isso com segurança vai exigir um trabalho de arqueologia. Você terá que rastrear todos os consumers, todos os clientes, todos os ambientes. O custo de polir cresce proporcionalmente ao tempo que o problema ficou oculto ou ignorado.
+
+### Custo organizacional
+
+Além do lado técnico, existe o lado humano. Refatorar contratos de API exige alinhamento entre front-end e back-end, e às vezes até com o time de produto. Estamos falando de reuniões, decisões, testes, deploys coordenados. É trabalho que não entrega feature nova, logo, é complicado justificar isso para a gestão.
+
+É também por isso que o over-fetching raramente é resolvido. Além de ser complicado tecnicamente, o custo organizacional de resolver acaba superando a dor imediata de manter.
+
+## Como evitar?
+
+### Cultura e processo
+
+- **Desenhe contratos antes de implementar.** A solução começa antes do código. Front-end e back-end precisam se alinhar previamente sobre o que cada endpoint precisa entregar.
+- **Ownership de contrato.** Alguém precisa ser responsável. Sem dono, o contrato cresce sem critério. Pode ser qualquer desenvolvedor, mas precisa estar documentado (tech doc, ADR ou seja lá como você chama isso) e precisa ter dono.
+- **Revisões periódicas de contrato.** Aplicações mudam, interfaces mudam. Os contratos também devem ser revisitados e atualizados quando necessário.
+
+### Soluções técnicas
+
+- **Projeção de campos no REST:** query params definindo quais campos retornar (`?fields=code,name`). Simples de implementar e resolve largura.
+- **BFF/GraphQL:** uma camada intermediária que adapta respostas de APIs genéricas para o que cada cliente realmente precisa.
+- **Paginação e filtros adequados:** entregue dados sob demanda em vez de tudo de uma vez. Isso resolve o volume.
+
+## Conclusão
+
+Voltando àquela conversa com os colegas, o que parecia uma discussão simples sobre dois campos extras em 100 registros acabou revelando algo muito maior. O over-fetching raramente aparece como um problema óbvio. Ele se instala silenciosamente, cresce junto com a aplicação e, quando finalmente se torna visível, já está enraizado nos contratos, nos times e na infraestrutura.
+
+A boa notícia é que evitar esse cenário não exige grandes refatorações ou mudanças tecnológicas. Exige atenção ao contrato desde o início, ownership claro e uma cultura de revisão periódica. A tecnologia, seja GraphQL, BFF ou projeção de campos, é consequência de uma decisão bem tomada antes do código existir.
+
+Então, antes de fechar esse post, fica a pergunta: quantos campos desnecessários estão trafegando na sua aplicação agora mesmo?
+
+## Referências
+
+- [Chrome Developers — Performance scoring](https://developer.chrome.com/docs/lighthouse/performance/performance-scoring)
+- [GraphQL](https://graphql.org/)
+- [Google Search Central — Core Web Vitals](https://developers.google.com/search/docs/appearance/core-web-vitals)

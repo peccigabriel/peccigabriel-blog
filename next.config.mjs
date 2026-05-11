@@ -7,6 +7,9 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.js");
 
 const nextConfig = {
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
+  experimental: {
+    optimizePackageImports: ["@chakra-ui/react"],
+  },
 };
 
 const withMDX = createMDX({

@@ -41,16 +41,16 @@ export function getMDXComponents(components) {
     ),
 
     // Código inline e em bloco
-    code: (props) => (
-      <Code
-        bg="gray.100"
-        px="1"
-        py="0.5"
-        rounded="sm"
-        fontSize="0.9em"
-        {...props}
-      />
-    ),
+    // code: (props) => (
+    //   <Code
+    //     bg="gray.100"
+    //     px="1"
+    //     py="0.5"
+    //     rounded="sm"
+    //     fontSize="0.9em"
+    //     {...props}
+    //   />
+    // ),
     pre: (props) => (
       <Box
         as="pre"
