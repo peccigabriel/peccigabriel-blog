@@ -1,5 +1,6 @@
-import React from "react";
 import { Heading, Text, Link, Code, Box, List } from "@chakra-ui/react";
+
+const isExternalHref = (href = "") => /^https?:\/\//.test(href);
 
 export function getMDXComponents(components) {
   return {
@@ -14,13 +15,16 @@ export function getMDXComponents(components) {
     // Parágrafos
     p: (props) => <Text mb="4" lineHeight="tall" {...props} />,
 
-    // Links
-    a: (props) => (
+    // Links: só os externos abrem em nova aba
+    a: ({ href, ...props }) => (
       <Link
-        target="_blank"
+        href={href}
         color="teal.500"
         textDecoration="underline"
-        isExternal
+        {...(isExternalHref(href) && {
+          target: "_blank",
+          rel: "noopener noreferrer",
+        })}
         {...props}
       />
     ),
@@ -30,52 +34,37 @@ export function getMDXComponents(components) {
       <Box
         as="blockquote"
         borderLeftWidth="4px"
-        borderLeftColor="gray.200"
+        borderLeftColor="border.emphasized"
         pl="4"
         fontStyle="italic"
-        color="gray.600"
-        mb="8"
-        mt="8"
+        color="fg.muted"
+        my="8"
         {...props}
       />
     ),
 
     // Código inline e em bloco
-    // code: (props) => (
-    //   <Code
-    //     bg="gray.100"
-    //     px="1"
-    //     py="0.5"
-    //     rounded="sm"
-    //     fontSize="0.9em"
-    //     {...props}
-    //   />
-    // ),
+    code: (props) => <Code fontSize="0.9em" {...props} />,
     pre: (props) => (
       <Box
         as="pre"
-        bg="gray.800"
-        color="white"
+        bg="bg.subtle"
+        borderWidth="1px"
         rounded="md"
         p="4"
         overflowX="auto"
         mb="4"
+        css={{ "& code": { bg: "transparent", p: 0, fontSize: "0.9em" } }}
         {...props}
       />
     ),
 
     // Listas
-    ul: (props) => <List.Root as="ul" spacing="2" pl="5" mb="4" {...props} />,
+    ul: (props) => <List.Root gap="2" pl="5" mb="4" {...props} />,
     ol: (props) => (
-      <List.Root
-        as="ol"
-        spacing="2"
-        pl="5"
-        mb="4"
-        styleType="decimal"
-        {...props}
-      />
+      <List.Root as="ol" gap="2" pl="5" mb="4" listStyleType="decimal" {...props} />
     ),
+    li: (props) => <List.Item {...props} />,
 
     // Permite overrides adicionais
     ...components,

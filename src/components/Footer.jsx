@@ -1,35 +1,36 @@
 import { Stack, Box, Text, Link } from "@chakra-ui/react";
 import { useTranslations } from "next-intl";
+import { AUTHOR } from "@/config/site";
 
-const URL_LINKEDIN = "https://www.linkedin.com/in/gabriel-pecci-074a98169/";
-const URL_GITHUB = "https://github.com/peccigabriel";
+const SOCIAL_LINKS = [
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/gabriel-pecci-074a98169/" },
+  { label: "GitHub", href: "https://github.com/peccigabriel" },
+];
 
 export default function Footer() {
   const t = useTranslations("footer");
 
-  const CustomLink = ({ children, href }) => (
-    <Link
-      href={href}
-      color="blue.500"
-      _hover={{ textDecoration: "underline" }}
-      isExternal
-      target="_blank"
-      cursor="pointer"
-      fontSize="sm"
-    >
-      {children}
-    </Link>
-  );
-
   return (
     <Stack as="footer" py={4} textAlign="center">
-      <Text fontSize="sm" color="gray.600">
-        © {new Date().getFullYear()} Gabriel Pecci. {t("rights")}.
+      <Text fontSize="sm" color="fg.muted">
+        © {new Date().getFullYear()} {AUTHOR}. {t("rights")}.
       </Text>
       <Box>
-        <CustomLink href={URL_LINKEDIN}>LinkedIn</CustomLink>
-        {" | "}
-        <CustomLink href={URL_GITHUB}>GitHub</CustomLink>
+        {SOCIAL_LINKS.map(({ label, href }, i) => (
+          <span key={href}>
+            {i > 0 && " | "}
+            <Link
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              color="blue.500"
+              fontSize="sm"
+              _hover={{ textDecoration: "underline" }}
+            >
+              {label}
+            </Link>
+          </span>
+        ))}
       </Box>
     </Stack>
   );

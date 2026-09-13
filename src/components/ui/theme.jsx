@@ -1,16 +1,20 @@
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
-import { domine, dm, crimson } from "@/fonts/fonts";
+import { domine, dm } from "@/fonts/fonts";
 
 const customConfig = defineConfig({
-  config: {
-    initialColorMode: "light",
-    useSystemColorMode: false,
+  globalCss: {
+    body: {
+      display: "flex",
+      flexDirection: "column",
+      minHeight: "100vh",
+      fontSize: "1.25rem",
+    },
   },
   theme: {
     tokens: {
       fonts: {
-        heading: domine.style.fontFamily,
-        body: dm.style.fontFamily,
+        heading: { value: domine.style.fontFamily },
+        body: { value: dm.style.fontFamily },
       },
     },
   },

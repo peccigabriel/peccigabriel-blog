@@ -2,35 +2,42 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 
+const postsDir = (locale) =>
+  path.join(process.cwd(), "content", "posts", locale);
+
+// Fallback para posts sem `description` no frontmatter: remove a sintaxe
+// markdown mais comum antes de cortar o excerpt.
+const stripMarkdown = (md) =>
+  md
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/(\*\*|__|\*|_|`)/g, "")
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^>\s?/gm, "")
+    .replace(/\n+/g, " ")
+    .trim();
+
+export function getPostSlugs(locale) {
+  const dir = postsDir(locale);
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((name) => name.endsWith(".mdx"))
+    .map((name) => name.replace(/\.mdx$/, ""));
+}
+
+export function getPostBySlug(locale, slug) {
+  const fullPath = path.join(postsDir(locale), `${slug}.mdx`);
+  if (!fs.existsSync(fullPath)) return null;
+
+  const { data, content } = matter(fs.readFileSync(fullPath, "utf-8"));
+  const excerpt =
+    data.description || `${stripMarkdown(content).substring(0, 280).trim()}…`;
+
+  return { slug, ...data, excerpt, content };
+}
+
 export function getAllPosts(locale = "pt-br") {
-  const postsDir = path.join(process.cwd(), "content", "posts", locale);
-
-  if (!fs.existsSync(postsDir)) {
-    return [];
-  }
-
-  const files = fs
-    .readdirSync(postsDir)
-    .filter((name) => name.endsWith(".mdx"));
-
-  const posts = files.map((filename) => {
-    const slug = filename.replace(/\.mdx$/, "");
-    const fullPath = path.join(postsDir, filename);
-    const source = fs.readFileSync(fullPath, "utf-8");
-
-    const { data, content } = matter(source);
-    const excerpt =
-      content.trim().replace(/\n+/g, " ").substring(0, 280).trim() + "…";
-
-    return {
-      slug,
-      title: data.title,
-      date: data.date,
-      excerpt,
-    };
-  });
-
-  return posts.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  return getPostSlugs(locale)
+    .map((slug) => getPostBySlug(locale, slug))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }

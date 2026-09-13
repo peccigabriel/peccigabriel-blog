@@ -23,5 +23,9 @@
     "readMore": "Read more",
     "empty": "No articles available yet.",
     "readDescription": "Read \"{title}\" on [peccigabriel] blog"
+  },
+  "notFound": {
+    "message": "This page doesn't exist (or has moved).",
+    "backHome": "Back to home"
   }
 }

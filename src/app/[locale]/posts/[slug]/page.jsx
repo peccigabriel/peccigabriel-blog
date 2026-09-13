@@ -1,87 +1,53 @@
-import path from "path";
-import matter from "gray-matter";
-import { promises as fs } from "fs";
-import { formatDate } from "@/helpers/formatDate";
-import { MDXRemote } from "next-mdx-remote/rsc";
-import { Provider } from "@/components/ui/provider";
-import { getMDXComponents } from "../../../../../mdx-components";
-import { Text, Heading, Box } from "@chakra-ui/react";
 import Image from "next/image";
+import { notFound } from "next/navigation";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { MDXRemote } from "next-mdx-remote/rsc";
+import { Text, Heading, Box, Separator } from "@chakra-ui/react";
+import { formatDate } from "@/helpers/formatDate";
+import { getPostBySlug, getPostSlugs } from "@/helpers/getAllPosts";
+import { absoluteUrl, canonicalFor } from "@/helpers/seo";
+import { getMDXComponents } from "@/components/mdx-components";
 import ReadingProgress from "@/components/ReadingProgress";
 import { routing } from "@/i18n/routing";
-import { getTranslations } from "next-intl/server";
+import { SITE_NAME } from "@/config/site";
 
-const BASE_URL = "https://peccigabriel.com";
+// Só as rotas vindas de generateStaticParams existem; qualquer outro slug → 404.
+export const dynamicParams = false;
 
-export async function generateStaticParams() {
-  const params = [];
-
-  for (const locale of routing.locales) {
-    const postsDir = path.join(process.cwd(), "content", "posts", locale);
-
-    try {
-      const files = await fs.readdir(postsDir);
-      const mdxFiles = files.filter((f) => f.endsWith(".mdx"));
-
-      for (const filename of mdxFiles) {
-        params.push({
-          locale,
-          slug: filename.replace(/\.mdx$/, ""),
-        });
-      }
-    } catch {
-      // Directory doesn't exist yet, skip
-    }
-  }
-
-  return params;
+export function generateStaticParams() {
+  return routing.locales.flatMap((locale) =>
+    getPostSlugs(locale).map((slug) => ({ locale, slug }))
+  );
 }
 
 export async function generateMetadata({ params }) {
   const { locale, slug } = await params;
+  const post = getPostBySlug(locale, slug);
+  if (!post) return {};
+
   const t = await getTranslations({ locale, namespace: "postList" });
-
-  const file = path.join(
-    process.cwd(),
-    "content",
-    "posts",
-    locale,
-    `${slug}.mdx`
-  );
-  const source = await fs.readFile(file, "utf8");
-  const { data } = matter(source);
-
-  const title = data.title;
   const description =
-    data.description || t("readDescription", { title: data.title });
-  const imageUrl = `${BASE_URL}${data.cover}`;
-  const postUrl =
-    locale === "pt-br"
-      ? `${BASE_URL}/posts/${slug}`
-      : `${BASE_URL}/${locale}/posts/${slug}`;
+    post.description || t("readDescription", { title: post.title });
+  const imageUrl = absoluteUrl(post.cover);
+  const postPath = `/posts/${slug}`;
 
   return {
-    title,
+    title: post.title,
     description,
+    alternates: canonicalFor(postPath),
     openGraph: {
       type: "article",
       locale: locale === "pt-br" ? "pt_BR" : "en_US",
-      url: postUrl,
-      siteName: "[peccigabriel]",
-      title,
+      url: absoluteUrl(postPath),
+      siteName: SITE_NAME,
+      title: post.title,
       description,
-      images: [
-        {
-          url: imageUrl,
-          alt: data.coverAlt,
-          width: 1200,
-          height: 630,
-        },
-      ],
+      publishedTime: post.date,
+      images: [{ url: imageUrl, alt: post.coverAlt }],
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: post.title,
       description,
       images: [imageUrl],
     },
@@ -90,35 +56,38 @@ export async function generateMetadata({ params }) {
 
 export default async function PostPage({ params }) {
   const { locale, slug } = await params;
-  const file = path.join(
-    process.cwd(),
-    "content",
-    "posts",
-    locale,
-    `${slug}.mdx`
-  );
-  const source = await fs.readFile(file, "utf8");
-  const { content, data } = matter(source);
+  setRequestLocale(locale);
+
+  const post = getPostBySlug(locale, slug);
+  if (!post) notFound();
 
   return (
-    <Provider>
+    <Box as="article">
       <ReadingProgress />
-      <Text fontSize="sm" color="gray.500" m={4} textAlign="right">
-        {formatDate(data.date, locale)}
+      <Text fontSize="sm" color="fg.muted" m={4} textAlign="right">
+        <time dateTime={post.date}>{formatDate(post.date, locale)}</time>
       </Text>
-      <hr style={{ margin: "1rem 0" }} />
+      <Separator my={4} />
       <Heading as="h1" size="3xl" mt="8" mb="4">
-        {data.title}
+        {post.title}
       </Heading>
-      <Box mb={8} mt={8}>
+      <Box
+        position="relative"
+        aspectRatio="16 / 9"
+        overflow="hidden"
+        rounded="md"
+        my={8}
+      >
         <Image
-          src={data.cover}
-          alt={data.coverAlt}
-          width={1920}
-          height={1080}
+          src={post.cover}
+          alt={post.coverAlt}
+          fill
+          priority
+          sizes="(max-width: 768px) 100vw, 672px"
+          style={{ objectFit: "cover" }}
         />
       </Box>
-      <MDXRemote source={content} components={getMDXComponents()} />
-    </Provider>
+      <MDXRemote source={post.content} components={getMDXComponents()} />
+    </Box>
   );
 }
