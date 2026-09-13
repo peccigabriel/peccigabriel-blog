@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# [peccigabriel] blog
 
-## Getting Started
+Blog pessoal em **Next.js 15 (App Router)** + **Chakra UI v3** + **next-intl** (pt-br / en), com posts em MDX renderizados por `next-mdx-remote`.
 
-First, run the development server:
+## Rodando
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # build de produção
+npm run lint     # eslint .
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Requer Node >= 20.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Estrutura
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+content/posts/<locale>/<slug>.mdx   # posts (mesmo slug nos dois idiomas)
+messages/<locale>.json              # textos da UI
+public/images/                      # capas dos posts
+src/app/[locale]/                   # rotas (home, about, posts/[slug])
+src/app/{sitemap,robots}.js         # SEO
+src/components/                     # UI + mdx-components (mapeia tags MDX → Chakra)
+src/helpers/                        # getAllPosts, formatDate, seo
+src/i18n/                           # routing, navigation, request (next-intl)
+```
 
-## Learn More
+O idioma é escolhido por cookie (`localePrefix: "never"`): a mesma URL serve pt-br e en.
 
-To learn more about Next.js, take a look at the following resources:
+## Escrevendo um post
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Crie `content/posts/pt-br/<slug>.mdx` e `content/posts/en/<slug>.mdx` com o frontmatter:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```yaml
+---
+title: "Título do post"
+date: "2026-01-31"            # YYYY-MM-DD
+cover: "/images/capa.webp"    # em public/images, idealmente 16:9
+coverAlt: "Descrição da imagem"
+description: "Resumo curto usado na home e como meta description."
+---
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`description` é opcional — sem ela, a home usa os primeiros 280 caracteres do texto.

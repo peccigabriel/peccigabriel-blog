@@ -1,8 +1,22 @@
 import { Text, Box, Heading, Stack } from "@chakra-ui/react";
-import { useTranslations } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { canonicalFor } from "@/helpers/seo";
 
-export default function AboutPage() {
-  const t = useTranslations("about");
+export async function generateMetadata({ params }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "about" });
+
+  return {
+    title: t("pageTitle"),
+    description: t("intro"),
+    alternates: canonicalFor("/about"),
+  };
+}
+
+export default async function AboutPage({ params }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("about");
 
   return (
     <Box as="main" py={{ base: 2, md: 4 }} px={{ base: 2, md: 0 }}>
@@ -36,7 +50,7 @@ export default function AboutPage() {
           </Text>
         </Box>
 
-        <Text as="p" fontSize="sm" color="gray.500" textAlign="center" pt={2}>
+        <Text as="p" fontSize="sm" color="fg.muted" textAlign="center" pt={2}>
           {t("welcome")}
         </Text>
       </Stack>

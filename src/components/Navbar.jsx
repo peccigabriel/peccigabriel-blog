@@ -16,11 +16,11 @@ import {
   Link,
 } from "@chakra-ui/react";
 import { useTranslations } from "next-intl";
+import { Link as IntlLink } from "@/i18n/navigation";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const toggleMenu = () => setIsOpen((o) => !o);
   const t = useTranslations("navbar");
 
   const Icon = isOpen ? RiCloseLargeLine : RxHamburgerMenu;
@@ -31,11 +31,11 @@ export default function Navbar() {
   ];
 
   return (
-    <Box>
+    <Box as="header">
       <Container maxW="2xl">
-        <Flex h={24} align="center" justify="space-between">
+        <Flex as="nav" h={24} align="center" justify="space-between">
           <Flex align="center" gap={4}>
-            <Menu.Root open={isOpen} onOpenChange={toggleMenu}>
+            <Menu.Root open={isOpen} onOpenChange={(e) => setIsOpen(e.open)}>
               <Menu.Trigger asChild>
                 <IconButton aria-label="Menu" variant="ghost" size="md">
                   <Icon size={24} />
@@ -45,9 +45,9 @@ export default function Navbar() {
                 <Menu.Positioner>
                   <Menu.Content>
                     {menuItems.map(({ label, href }) => (
-                      <Menu.Item key={label} asChild>
+                      <Menu.Item key={href} value={href} asChild>
                         <Link
-                          href={href}
+                          asChild
                           fontFamily={poppins.style.fontFamily}
                           fontSize="sm"
                           fontWeight="500"
@@ -56,10 +56,9 @@ export default function Navbar() {
                           _hover={{
                             textDecoration: "none",
                             transform: "scale(1.05)",
-                            color: "primary",
                           }}
                         >
-                          {label}
+                          <IntlLink href={href}>{label}</IntlLink>
                         </Link>
                       </Menu.Item>
                     ))}
@@ -67,24 +66,22 @@ export default function Navbar() {
                 </Menu.Positioner>
               </Portal>
             </Menu.Root>
-            <Link
-              href="/"
-              _hover={{ textDecoration: "none", color: "primary" }}
-            >
-              <Text
-                fontFamily={domine.style.fontFamily}
-                fontSize="xl"
-                fontWeight="bold"
-                color="text"
-              >
-                👨🏼‍💻 [peccigabriel]
-              </Text>
+            <Link asChild _hover={{ textDecoration: "none" }}>
+              <IntlLink href="/">
+                <Text
+                  fontFamily={domine.style.fontFamily}
+                  fontSize="xl"
+                  fontWeight="bold"
+                >
+                  👨🏼‍💻 [peccigabriel]
+                </Text>
+              </IntlLink>
             </Link>
           </Flex>
-          <Box display="flex" alignItems="center" gap={4}>
+          <Flex align="center" gap={4}>
             <LanguageSwitcher />
             <ColorModeButton />
-          </Box>
+          </Flex>
         </Flex>
       </Container>
     </Box>

@@ -23,5 +23,9 @@
     "readMore": "Continue lendo",
     "empty": "Nenhum artigo disponível ainda.",
     "readDescription": "Leia \"{title}\" no blog [peccigabriel]"
+  },
+  "notFound": {
+    "message": "Essa página não existe (ou foi movida).",
+    "backHome": "Voltar ao início"
   }
 }
