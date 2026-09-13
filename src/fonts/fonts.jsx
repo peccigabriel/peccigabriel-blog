@@ -1,10 +1,4 @@
-import { Domine, Poppins, DM_Sans, Crimson_Text } from "next/font/google";
-
-export const crimson = Crimson_Text({
-  weight: ["400", "600", "700"],
-  subsets: ["latin"],
-  display: "swap",
-});
+import { Domine, Poppins, DM_Sans } from "next/font/google";
 
 export const dm = DM_Sans({
   weight: ["400", "500", "700"],
