@@ -2,24 +2,33 @@
 
 import { useState, useEffect } from "react";
 import { Box } from "@chakra-ui/react";
-import { useColorModeValue } from "@/components/ui/color-mode";
 
 export default function ReadingProgress() {
   const [progress, setProgress] = useState(0);
-  const barColor = useColorModeValue("gray.800", "gray.200");
 
   useEffect(() => {
+    let frame = 0;
+
     const updateProgress = () => {
-      const scrollTop = window.scrollY;
+      frame = 0;
       const docHeight =
         document.documentElement.scrollHeight - window.innerHeight;
-      const percent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      setProgress(percent);
+      setProgress(docHeight > 0 ? (window.scrollY / docHeight) * 100 : 0);
+    };
+
+    // Uma atualização por frame, no máximo; o listener passivo não bloqueia o scroll.
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(updateProgress);
     };
 
     updateProgress();
-    window.addEventListener("scroll", updateProgress);
-    return () => window.removeEventListener("scroll", updateProgress);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
   return (
@@ -29,9 +38,10 @@ export default function ReadingProgress() {
       left={0}
       height="4px"
       width={`${progress}%`}
-      bg={barColor}
-      zIndex={9999}
+      bg="fg"
+      zIndex="sticky"
       transition="width 0.1s ease-out"
+      aria-hidden="true"
     />
   );
 }
